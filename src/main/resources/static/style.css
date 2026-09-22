@@ -720,3 +720,403 @@ svg { width: 20px; height: 20px; flex-shrink: 0; }
     scroll-behavior: auto !important;
   }
 }
+
+
+/* =========================================================
+   NOI DUNG MARKDOWN TRONG CAU TRA LOI
+   Gemini tra ve Markdown; phan duoi dinh dang cac the sinh ra.
+   ========================================================= */
+
+/* Bong bong cua Gemini rong hon bong bong nguoi dung,
+   vi noi dung thuong dai va co khoi code. */
+.row.is-model .bubble {
+  max-width: 100%;
+  padding: var(--space-4) var(--space-4) var(--space-3);
+}
+
+/* Khoang cach giua cac khoi: dung margin doc gon gang */
+.md > * + * { margin-top: var(--space-3); }
+.md > *:first-child { margin-top: 0; }
+.md > *:last-child { margin-bottom: 0; }
+
+/* ---------- Doan van ---------- */
+.md p {
+  line-height: 1.7;                /* de doc voi doan dai */
+  max-width: 68ch;                 /* 65-75 ky tu moi dong */
+}
+
+/* ---------- Tieu de ---------- */
+.md h2, .md h3, .md h4, .md h5, .md h6 {
+  line-height: 1.35;
+  font-weight: 600;
+  color: var(--color-foreground);
+}
+
+.md > h2 + *, .md > h3 + *, .md > h4 + * { margin-top: var(--space-2); }
+
+.md h2 {
+  font-size: 18px;
+  margin-top: var(--space-5);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.md h3 { font-size: 16px; margin-top: var(--space-4); }
+.md h4 { font-size: 15px; margin-top: var(--space-4); color: var(--color-secondary); }
+.md h5, .md h6 { font-size: 14px; color: var(--color-muted-fg); }
+
+/* ---------- Danh sach ---------- */
+.md ul, .md ol {
+  padding-left: var(--space-5);
+  max-width: 68ch;
+}
+
+.md li { line-height: 1.7; }
+.md li + li { margin-top: var(--space-2); }
+
+/* Danh sach long nhau khong can khoang cach lon */
+.md li > ul, .md li > ol { margin-top: var(--space-2); }
+
+.md ul { list-style: none; padding-left: var(--space-4); }
+.md ul > li { position: relative; padding-left: var(--space-4); }
+
+/* Dau cham tron mau thuong hieu thay cho bullet mac dinh */
+.md ul > li::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: .68em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--color-secondary);
+}
+
+.md ol { list-style: decimal; }
+.md ol > li::marker {
+  color: var(--color-secondary);
+  font-weight: 600;
+}
+
+/* ---------- Code trong dong van ---------- */
+.md code {
+  font-family: 'JetBrains Mono', 'Cascadia Code', Consolas, 'Courier New', monospace;
+  font-size: .89em;
+  padding: .15em .42em;
+  border-radius: 5px;
+  background: rgba(124, 58, 237, .16);
+  border: 1px solid rgba(124, 58, 237, .26);
+  color: #DDD0FF;
+  white-space: nowrap;
+}
+
+/* ---------- Khoi code ---------- */
+.code-block {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #060A16;              /* toi hon nen bong bong de noi bat */
+}
+
+.code-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-muted);
+  border-bottom: 1px solid var(--color-border);
+}
+
+.code-lang {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--color-secondary);
+}
+
+.code-copy {
+  padding: var(--space-1) var(--space-2);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--color-muted-fg);
+  border: 1px solid transparent;
+  transition: background var(--duration) var(--ease),
+              color var(--duration) var(--ease),
+              border-color var(--duration) var(--ease);
+}
+
+.code-copy:hover {
+  background: var(--color-surface-2);
+  color: var(--color-foreground);
+  border-color: var(--color-border);
+}
+
+.code-copy.is-done { color: #4ADE80; border-color: rgba(74, 222, 128, .4); }
+
+.code-block pre {
+  margin: 0;
+  padding: var(--space-3) var(--space-4);
+  overflow-x: auto;
+}
+
+.code-block code {
+  /* Bo dinh dang cua code trong dong van */
+  display: block;
+  padding: 0;
+  background: none;
+  border: none;
+  white-space: pre;
+  font-size: 13px;
+  line-height: 1.65;
+  color: #D6DEEB;
+}
+
+/* Thanh cuon ngang manh cho khoi code dai */
+.code-block pre::-webkit-scrollbar { height: 8px; }
+.code-block pre::-webkit-scrollbar-track { background: transparent; }
+.code-block pre::-webkit-scrollbar-thumb {
+  background: var(--color-border-strong);
+  border-radius: 4px;
+}
+
+/* ---------- Trich dan ---------- */
+.md blockquote {
+  padding: var(--space-2) var(--space-4);
+  border-left: 3px solid var(--color-secondary);
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: rgba(167, 139, 250, .08);
+  color: var(--color-muted-fg);
+  font-style: italic;
+  max-width: 68ch;
+}
+
+/* ---------- Bang ---------- */
+.table-wrap {
+  overflow-x: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+}
+
+.md table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.md th, .md td {
+  padding: var(--space-2) var(--space-3);
+  text-align: left;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.md th {
+  background: var(--color-muted);
+  font-weight: 600;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.md tbody tr:last-child td { border-bottom: none; }
+.md tbody tr:hover { background: rgba(124, 58, 237, .06); }
+
+/* ---------- Duong ke ngang ---------- */
+.md hr {
+  border: none;
+  height: 1px;
+  background: var(--color-border);
+  margin: var(--space-4) 0;
+}
+
+/* ---------- Lien ket ---------- */
+.md a {
+  color: var(--color-accent);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.md a:hover { color: var(--color-secondary); }
+
+/* ---------- Nhan manh ---------- */
+.md strong { font-weight: 600; color: #FFFFFF; }
+.md em { font-style: italic; }
+.md del { opacity: .6; }
+
+/* ---------- Man hinh nho ---------- */
+@media (max-width: 860px) {
+  .md p, .md ul, .md ol, .md blockquote { max-width: 100%; }
+  .code-block pre { padding: var(--space-2) var(--space-3); }
+  .code-block code { font-size: 12.5px; }
+}
+
+
+/* =========================================================
+   DINH KEM FILE
+   ========================================================= */
+
+/* ---------- Nut kep giay trong o soan tin ---------- */
+.attach-btn {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  flex-shrink: 0;
+  border-radius: var(--radius);
+  color: var(--color-muted-fg);
+  transition: background var(--duration) var(--ease), color var(--duration) var(--ease);
+}
+.attach-btn:hover { background: var(--color-muted); color: var(--color-secondary); }
+.attach-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ---------- Xem truoc file da chon ---------- */
+.file-preview {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  max-width: 780px;
+  margin: 0 auto var(--space-2);
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-3);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius);
+  animation: rise 200ms var(--ease) both;
+}
+
+.file-thumb {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+}
+
+.file-icon {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-sm);
+  background: rgba(124, 58, 237, .16);
+  color: var(--color-secondary);
+}
+
+.file-meta {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.file-name {
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.file-size { font-size: 12px; color: var(--color-muted-fg); }
+
+.file-remove { width: 32px; height: 32px; flex-shrink: 0; }
+
+/* ---------- Khi keo file vao cua so ---------- */
+.composer.is-dragging .composer-box {
+  border-color: var(--color-secondary);
+  background: rgba(167, 139, 250, .06);
+}
+
+.drop-hint {
+  position: fixed;
+  inset: 0;
+  z-index: 70;
+  display: grid;
+  place-items: center;
+  background: rgba(2, 6, 23, .82);
+  backdrop-filter: blur(4px);
+  animation: fade 140ms var(--ease) both;
+  pointer-events: none;
+}
+
+.drop-hint-box {
+  padding: var(--space-6);
+  border: 2px dashed var(--color-secondary);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  color: var(--color-foreground);
+}
+
+.drop-hint-box svg {
+  width: 40px;
+  height: 40px;
+  margin-bottom: var(--space-3);
+  color: var(--color-secondary);
+}
+
+.drop-hint-box p { font-size: 15px; font-weight: 500; }
+.drop-hint-box span { font-size: 13px; color: var(--color-muted-fg); }
+
+/* ---------- Dinh kem hien trong bong bong tin nhan ---------- */
+.bubble-attach {
+  margin-bottom: var(--space-2);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+
+/* Anh: hien thi truc tiep, bam de mo to */
+.bubble-attach img {
+  display: block;
+  max-width: 100%;
+  max-height: 320px;
+  border-radius: var(--radius-sm);
+  border: 1px solid rgba(255, 255, 255, .16);
+  cursor: zoom-in;
+}
+
+/* File khac: hien dang the co ten va bieu tuong */
+.attach-card {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, .08);
+  border: 1px solid rgba(255, 255, 255, .14);
+  text-decoration: none;
+  color: inherit;
+  font-size: 13px;
+  transition: background var(--duration) var(--ease);
+}
+.attach-card:hover { background: rgba(255, 255, 255, .14); }
+.attach-card svg { width: 17px; height: 17px; flex-shrink: 0; opacity: .85; }
+.attach-card span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---------- Xem anh phong to ---------- */
+.lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  padding: var(--space-5);
+  background: rgba(2, 6, 23, .92);
+  animation: fade 160ms var(--ease) both;
+  cursor: zoom-out;
+}
+
+.lightbox img {
+  max-width: 100%;
+  max-height: 100%;
+  border-radius: var(--radius);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .6);
+}
+
+@media (max-width: 860px) {
+  .file-preview { margin-bottom: var(--space-2); }
+  .bubble-attach img { max-height: 240px; }
+}

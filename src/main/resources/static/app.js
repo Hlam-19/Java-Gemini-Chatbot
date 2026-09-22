@@ -9,6 +9,7 @@ const state = {
   sessions: [],
   currentSessionId: null,
   sending: false,
+  pendingFile: null,   // file dang cho gui kem
 };
 
 // ---------- Phan tu DOM ----------
@@ -181,6 +182,7 @@ function backToAuth() {
   state.sessions = [];
   state.currentSessionId = null;
   state.sending = false;
+  state.pendingFile = null;
 
   appScreen.hidden = true;
   authScreen.hidden = false;
@@ -428,7 +430,7 @@ async function openSession(sessionId) {
     if (!data.messages || data.messages.length === 0) {
       showEmptyState();
     } else {
-      data.messages.forEach((m) => addMessage(m.role, m.content));
+      data.messages.forEach((m) => addMessage(m.role, m.content, m.attachment));
       scrollToBottom(false);
     }
   } catch (err) {
@@ -470,7 +472,7 @@ function bindSuggestions() {
   });
 }
 
-function addMessage(role, content) {
+function addMessage(role, content, attachment) {
   const isUser = role === 'user';
   const isError = role === 'error';
 
@@ -484,7 +486,54 @@ function addMessage(role, content) {
 
   const bubble = document.createElement('div');
   bubble.className = 'bubble';
-  bubble.textContent = content;          // textContent: tranh chen HTML tu noi dung
+
+  // File dinh kem hien phia tren noi dung tin nhan
+  if (attachment) {
+    const wrap = document.createElement('div');
+    wrap.className = 'bubble-attach';
+
+    if ((attachment.type || '').startsWith('image/')) {
+      const img = document.createElement('img');
+      img.src = attachment.path;
+      img.alt = attachment.name || 'Ảnh đính kèm';
+      img.loading = 'lazy';
+      img.addEventListener('click', () => openLightbox(img.src, img.alt));
+      wrap.appendChild(img);
+    } else {
+      const card = document.createElement('a');
+      card.className = 'attach-card';
+      card.href = attachment.path;
+      card.target = '_blank';
+      card.rel = 'noopener noreferrer';
+      card.innerHTML =
+        '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" ' +
+        'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>' +
+        '<path d="M14 2v6h6"/></svg>';
+      const label = document.createElement('span');
+      label.textContent = attachment.name || 'Tệp đính kèm';
+      card.appendChild(label);
+      wrap.appendChild(card);
+    }
+    bubble.appendChild(wrap);
+  }
+
+  if (isUser || isError) {
+    // Tin nguoi dung va thong bao loi: hien nguyen van, khong dien giai Markdown
+    if (content) {
+      const p = document.createElement('div');
+      p.textContent = content;
+      bubble.appendChild(p);
+    }
+  } else {
+    // Cau tra loi cua Gemini la Markdown -> dung ra HTML.
+    // renderMarkdown() da escape HTML truoc khi parse nen an toan.
+    bubble.classList.add('md');
+    const body = document.createElement('div');
+    body.innerHTML = renderMarkdown(content);
+    bubble.appendChild(body);
+    bindCopyButtons(bubble);
+  }
 
   row.append(avatar, bubble);
   messagesEl.appendChild(row);
@@ -518,14 +567,23 @@ chatForm.addEventListener('submit', async (e) => {
   if (state.sending) return;
 
   const text = inputEl.value.trim();
-  if (!text) return;
+  const file = state.pendingFile;
+
+  // Phai co it nhat mot trong hai: chu hoac file
+  if (!text && !file) return;
 
   const emptyState = $('emptyState');
   if (emptyState) emptyState.remove();
 
-  addMessage('user', text);
+  // Hien ngay tin nhan cua nguoi dung, kem anh xem truoc neu co
+  const localAttachment = file
+    ? { name: file.name, type: file.type, path: URL.createObjectURL(file) }
+    : null;
+  addMessage('user', text, localAttachment);
+
   inputEl.value = '';
   autoResize();
+  clearFile();
   scrollToBottom();
 
   state.sending = true;
@@ -533,13 +591,36 @@ chatForm.addEventListener('submit', async (e) => {
   const typing = addTyping();
 
   try {
-    const payload = { message: text };
-    if (state.currentSessionId) payload.sessionId = state.currentSessionId;
+    let data;
 
-    const data = await api('/api/chat', {
-      method: 'POST',
-      body: JSON.stringify(payload),
-    });
+    if (file) {
+      // Co file -> gui dang multipart/form-data.
+      // Khong dat Content-Type thu cong: trinh duyet tu dien kem boundary.
+      const form = new FormData();
+      form.append('message', text);
+      if (state.currentSessionId) form.append('sessionId', state.currentSessionId);
+      form.append('file', file);
+
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        body: form,
+        credentials: 'same-origin',
+        cache: 'no-store',
+      });
+      data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        const err = new Error(data.error || 'Đã xảy ra lỗi, vui lòng thử lại');
+        err.status = res.status;
+        throw err;
+      }
+    } else {
+      const payload = { message: text };
+      if (state.currentSessionId) payload.sessionId = state.currentSessionId;
+      data = await api('/api/chat', {
+        method: 'POST',
+        body: JSON.stringify(payload),
+      });
+    }
 
     typing.remove();
     addMessage('model', data.reply);
@@ -578,6 +659,155 @@ chatForm.addEventListener('submit', async (e) => {
     inputEl.focus();
   }
 });
+
+// =========================================================
+// DINH KEM FILE
+// =========================================================
+const MAX_FILE_MB = 10;
+const ALLOWED_EXT = [
+  'png', 'jpg', 'jpeg', 'webp', 'gif', 'pdf',
+  'txt', 'md', 'csv', 'json', 'xml', 'java', 'js', 'py', 'sql', 'html', 'css',
+];
+
+const fileInput   = $('fileInput');
+const filePreview = $('filePreview');
+
+function formatSize(bytes) {
+  if (bytes < 1024) return bytes + ' B';
+  if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+  return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+}
+
+/** Kiem tra va nhan mot file, tra ve true neu hop le. */
+function setFile(file) {
+  if (!file) return false;
+
+  const ext = (file.name.split('.').pop() || '').toLowerCase();
+  if (!ALLOWED_EXT.includes(ext)) {
+    toast('Định dạng không hỗ trợ. Chỉ nhận: ảnh, PDF và file văn bản.');
+    return false;
+  }
+  if (file.size > MAX_FILE_MB * 1024 * 1024) {
+    toast('File quá lớn, tối đa ' + MAX_FILE_MB + 'MB');
+    return false;
+  }
+
+  state.pendingFile = file;
+
+  const img  = $('filePreviewImg');
+  const icon = $('filePreviewIcon');
+
+  if (file.type.startsWith('image/')) {
+    img.src = URL.createObjectURL(file);
+    img.hidden = false;
+    icon.hidden = true;
+  } else {
+    img.hidden = true;
+    icon.hidden = false;
+  }
+
+  $('filePreviewName').textContent = file.name;
+  $('filePreviewSize').textContent = formatSize(file.size);
+  filePreview.hidden = false;
+  inputEl.focus();
+  return true;
+}
+
+function clearFile() {
+  state.pendingFile = null;
+  fileInput.value = '';
+  filePreview.hidden = true;
+  const img = $('filePreviewImg');
+  if (img.src.startsWith('blob:')) URL.revokeObjectURL(img.src);
+  img.removeAttribute('src');
+}
+
+$('attachBtn').addEventListener('click', () => fileInput.click());
+$('fileRemove').addEventListener('click', clearFile);
+fileInput.addEventListener('change', () => setFile(fileInput.files[0]));
+
+// ---------- Dan anh tu clipboard ----------
+inputEl.addEventListener('paste', (e) => {
+  const items = e.clipboardData?.items || [];
+  for (const item of items) {
+    if (item.kind === 'file') {
+      const file = item.getAsFile();
+      if (file && setFile(file)) {
+        e.preventDefault();
+        toast('Đã đính kèm ảnh từ clipboard');
+      }
+      return;
+    }
+  }
+});
+
+// ---------- Keo tha file vao cua so ----------
+let dragDepth = 0;
+let dropHint = null;
+
+function showDropHint() {
+  if (dropHint) return;
+  dropHint = document.createElement('div');
+  dropHint.className = 'drop-hint';
+  dropHint.innerHTML =
+    '<div class="drop-hint-box">' +
+      '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" ' +
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' +
+      '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5-5 5 5M12 5v12"/></svg>' +
+      '<p>Thả file vào đây để đính kèm</p>' +
+      '<span>Ảnh, PDF hoặc file văn bản · tối đa ' + MAX_FILE_MB + 'MB</span>' +
+    '</div>';
+  document.body.appendChild(dropHint);
+}
+
+function hideDropHint() {
+  dragDepth = 0;
+  if (dropHint) {
+    dropHint.remove();
+    dropHint = null;
+  }
+}
+
+window.addEventListener('dragenter', (e) => {
+  if (appScreen.hidden) return;
+  if (![...(e.dataTransfer?.types || [])].includes('Files')) return;
+  e.preventDefault();
+  dragDepth++;
+  showDropHint();
+});
+
+window.addEventListener('dragover', (e) => {
+  if (dropHint) e.preventDefault();
+});
+
+window.addEventListener('dragleave', () => {
+  if (--dragDepth <= 0) hideDropHint();
+});
+
+window.addEventListener('drop', (e) => {
+  if (appScreen.hidden) return;
+  e.preventDefault();
+  hideDropHint();
+  const file = e.dataTransfer?.files?.[0];
+  if (file) setFile(file);
+});
+
+// ---------- Xem anh phong to ----------
+function openLightbox(src, alt) {
+  const box = document.createElement('div');
+  box.className = 'lightbox';
+  box.innerHTML = '<img alt="">';
+  box.querySelector('img').src = src;
+  box.querySelector('img').alt = alt || '';
+  box.addEventListener('click', () => box.remove());
+  document.addEventListener('keydown', function esc(ev) {
+    if (ev.key === 'Escape') {
+      box.remove();
+      document.removeEventListener('keydown', esc);
+    }
+  });
+  document.body.appendChild(box);
+}
 
 // Enter de gui, Shift+Enter de xuong dong
 inputEl.addEventListener('keydown', (e) => {

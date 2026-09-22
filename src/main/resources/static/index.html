@@ -126,7 +126,35 @@
       </div>
 
       <form id="chatForm" class="composer">
+        <!-- Xem trước file đã chọn, hiện phía trên ô nhập -->
+        <div id="filePreview" class="file-preview" hidden>
+          <img id="filePreviewImg" class="file-thumb" alt="" hidden>
+          <span id="filePreviewIcon" class="file-icon" aria-hidden="true" hidden>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <path d="M14 2v6h6"/>
+            </svg>
+          </span>
+          <span class="file-meta">
+            <span id="filePreviewName" class="file-name"></span>
+            <span id="filePreviewSize" class="file-size"></span>
+          </span>
+          <button id="fileRemove" class="icon-btn file-remove" type="button" aria-label="Bỏ file đính kèm">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path d="M18 6L6 18M6 6l12 12"/>
+            </svg>
+          </button>
+        </div>
+
         <div class="composer-box">
+          <input id="fileInput" type="file" hidden
+                 accept=".png,.jpg,.jpeg,.webp,.gif,.pdf,.txt,.md,.csv,.json,.xml,.java,.js,.py,.sql,.html,.css">
+          <button id="attachBtn" class="attach-btn" type="button"
+                  aria-label="Đính kèm ảnh hoặc file" title="Đính kèm ảnh hoặc file">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>
+          </button>
           <textarea id="input" rows="1" placeholder="Nhập tin nhắn cho Gemini..."
                     aria-label="Nội dung tin nhắn"></textarea>
           <button id="sendBtn" class="send-btn" type="submit" aria-label="Gửi tin nhắn">
@@ -135,7 +163,7 @@
             </svg>
           </button>
         </div>
-        <p class="composer-hint">Enter để gửi · Shift + Enter để xuống dòng</p>
+        <p class="composer-hint">Enter để gửi · Shift + Enter để xuống dòng · Kéo thả hoặc dán ảnh để đính kèm</p>
       </form>
     </main>
   </div>
@@ -155,6 +183,7 @@
   <!-- Thông báo ngắn -->
   <div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
 
+  <script src="/markdown.js"></script>
   <script src="/app.js"></script>
 </body>
 </html>
