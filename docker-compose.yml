@@ -1,0 +1,98 @@
+services:
+
+  # ---------------- MySQL: luu du lieu lau dai ----------------
+  mysql:
+    image: mysql:8.0
+    container_name: chatbot-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-chatbot_db}
+      # utf8mb4 de luu duoc tieng Viet va emoji
+      MYSQL_ROOT_HOST: '%'
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+    ports:
+      # 3307 ben ngoai de khong dung cong MySQL san co tren may
+      - "${MYSQL_EXTERNAL_PORT:-3307}:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    healthcheck:
+      # Phai chay mot cau lenh SQL that su, khong dung 'mysqladmin ping':
+      # ping tra ve OK ngay ca khi MySQL con dang khoi tao va chua nhan ket noi.
+      test: ["CMD", "mysql", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-rootpassword}", "-e", "SELECT 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 40s
+    networks:
+      - chatbot-net
+
+  # ---------------- Redis: cache va phien dang nhap ----------------
+  redis:
+    image: redis:7-alpine
+    container_name: chatbot-redis
+    restart: unless-stopped
+    command:
+      # Gioi han bo nho, day du lieu it dung nhat ra khi day
+      - redis-server
+      - --maxmemory
+      - 256mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --appendonly
+      - "yes"
+    ports:
+      - "${REDIS_EXTERNAL_PORT:-6379}:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks:
+      - chatbot-net
+
+  # ---------------- Ung dung web ----------------
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: chatbot-app
+    restart: unless-stopped
+    ports:
+      - "${SERVER_PORT:-8080}:8080"
+    environment:
+      # Trong mang Docker, goi nhau bang TEN DICH VU chu khong phai localhost
+      DB_URL: jdbc:mysql://mysql:3306/${MYSQL_DATABASE:-chatbot_db}?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&useSSL=false
+      DB_USER: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD:-rootpassword}
+
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_ENABLED: "true"
+
+      # Lay tu file .env o thu muc goc - KHONG ghi thang vao day
+      GEMINI_API_KEY: ${GEMINI_API_KEY:?Thieu GEMINI_API_KEY - hay tao file .env tu .env.example}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
+
+      SERVER_PORT: 8080
+      SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
+      RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-20}
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - chatbot-net
+
+volumes:
+  mysql-data:
+  redis-data:
+
+networks:
+  chatbot-net:
+    driver: bridge

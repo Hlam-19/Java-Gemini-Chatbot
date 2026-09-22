@@ -1,0 +1,11 @@
+target/
+bin/
+.git/
+.github/
+.idea/
+*.iml
+.env
+data/
+*.log
+README.md
+docs/

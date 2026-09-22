@@ -11,14 +11,31 @@ Ung dung web chatbot viet bang Java thuan, dung HTTP server co san trong JDK
 - Tieu de doan chat tu sinh tu cau hoi dau tien
 - Luu lich su vao MySQL, moi user chi thay du lieu cua minh
 - Giao dien toi (dark), responsive, ho tro dieu huong ban phim
+- Redis: luu phien dang nhap (song qua restart), cache lich su va cau tra loi,
+  gioi han so tin nhan moi phut
 
 ## Yeu cau
 
-- JDK 21 tro len
-- Maven 3.8+
-- MySQL 8.0+ (hoac MariaDB) dang chay
+**Cach nhanh nhat:** chi can **Docker Desktop**.
 
-## Cai dat
+**Chay truc tiep de code:** JDK 21+, Maven 3.8+, MySQL 8.0+, va Docker (cho Redis).
+
+## Chay bang Docker (khuyen nghi)
+
+```bash
+cp .env.example .env          # roi dan GEMINI_API_KEY vao .env
+docker compose up -d --build
+```
+
+Mo <http://localhost:8080>. Lenh nay dung san MySQL, Redis va ung dung.
+
+```bash
+docker compose logs -f app    # xem log
+docker compose down           # tat (du lieu van con)
+docker compose down -v        # tat va xoa sach du lieu
+```
+
+## Cai dat thu cong
 
 1. Tao database trong MySQL:
 
@@ -171,8 +188,14 @@ Cac diem da tuan thu:
 - Ton trong `prefers-reduced-motion`
 - Responsive: sidebar truot ra tren man hinh < 860px
 
+## Tai lieu chi tiet
+
+Xem [docs/HUONG-DAN-DU-AN.md](docs/HUONG-DAN-DU-AN.md) - giai thich tung file,
+so do luong xu ly, quy uoc code va cach go loi. Danh cho thanh vien moi.
+
 ## Han che hien tai (neu muon phat trien tiep)
 
-- Phien dang nhap luu trong bo nho: restart server la phai dang nhap lai
 - Mat khau bam SHA-256 khong salt - du an that nen dung BCrypt
 - Server chay HTTP, chua co HTTPS
+- Chua phan trang lich su, doan chat rat dai se tai cham
+- Chua co test tu dong
