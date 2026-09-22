@@ -6,19 +6,12 @@ public class Message {
 
     private int id;
     private int userId;
+    private int sessionId;
     private String role;
     private String content;
     private Timestamp createdAt;
 
     public Message() {
-    }
-
-    public Message(int id, int userId, String role, String content, Timestamp createdAt) {
-        this.id = id;
-        this.userId = userId;
-        this.role = role;
-        this.content = content;
-        this.createdAt = createdAt;
     }
 
     public int getId() {
@@ -35,6 +28,14 @@ public class Message {
 
     public void setUserId(int userId) {
         this.userId = userId;
+    }
+
+    public int getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(int sessionId) {
+        this.sessionId = sessionId;
     }
 
     public String getRole() {
