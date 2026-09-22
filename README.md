@@ -13,6 +13,8 @@ Ung dung web chatbot viet bang Java thuan, dung HTTP server co san trong JDK
 - Giao dien toi (dark), responsive, ho tro dieu huong ban phim
 - Redis: luu phien dang nhap (song qua restart), cache lich su va cau tra loi,
   gioi han so tin nhan moi phut
+- Dinh kem anh / PDF / file van ban de Gemini doc (keo tha, dan tu clipboard)
+- Cau tra loi hien thi dang Markdown: tieu de, danh sach, bang, khoi code co nut sao chep
 
 ## Yeu cau
 
@@ -83,6 +85,9 @@ docker compose down -v        # tat va xoa sach du lieu
 | `DB_URL` | `jdbc:mysql://localhost:3306/chatbot_db?...` | Chuoi ket noi MySQL |
 | `DB_USER` | `root` | User database |
 | `DB_PASSWORD` | (rong) | Mat khau database |
+| `UPLOAD_DIR` | `uploads` | Thu muc luu file tai len |
+| `UPLOAD_MAX_MB` | `10` | Dung luong toi da moi file |
+| `RATE_LIMIT_PER_MINUTE` | `20` | So tin nhan toi da moi phut |
 
 Thu tu uu tien: **bien moi truong he thong** > **file .env** > **gia tri mac dinh**.
 Khi deploy len server that, chi can set environment variable, khong can mang file `.env` theo.

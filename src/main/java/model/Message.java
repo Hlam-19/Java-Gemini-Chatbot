@@ -9,6 +9,9 @@ public class Message {
     private int sessionId;
     private String role;
     private String content;
+    private String attachmentName;
+    private String attachmentPath;
+    private String attachmentType;
     private Timestamp createdAt;
 
     public Message() {
@@ -52,6 +55,20 @@ public class Message {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public String getAttachmentName() { return attachmentName; }
+    public void setAttachmentName(String attachmentName) { this.attachmentName = attachmentName; }
+
+    public String getAttachmentPath() { return attachmentPath; }
+    public void setAttachmentPath(String attachmentPath) { this.attachmentPath = attachmentPath; }
+
+    public String getAttachmentType() { return attachmentType; }
+    public void setAttachmentType(String attachmentType) { this.attachmentType = attachmentType; }
+
+    /** Co file dinh kem khong. */
+    public boolean hasAttachment() {
+        return attachmentPath != null && !attachmentPath.isBlank();
     }
 
     public Timestamp getCreatedAt() {

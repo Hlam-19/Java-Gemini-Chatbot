@@ -22,5 +22,8 @@ config.properties
 /data/
 chatbotdb.*
 
+# File nguoi dung tai len
+/uploads/
+
 # Log
 *.log

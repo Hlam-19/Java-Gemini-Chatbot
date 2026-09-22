@@ -58,6 +58,9 @@ public final class ChatCache {
                 m.setSessionId(sessionId);
                 m.setRole(o.getString("role"));
                 m.setContent(o.getString("content"));
+                m.setAttachmentName(o.optString("aName", null));
+                m.setAttachmentPath(o.optString("aPath", null));
+                m.setAttachmentType(o.optString("aType", null));
                 list.add(m);
             }
             return list;
@@ -75,9 +78,15 @@ public final class ChatCache {
         }
         JSONArray arr = new JSONArray();
         for (Message m : messages) {
-            arr.put(new JSONObject()
+            JSONObject o = new JSONObject()
                     .put("role", m.getRole())
-                    .put("content", m.getContent() == null ? "" : m.getContent()));
+                    .put("content", m.getContent() == null ? "" : m.getContent());
+            if (m.hasAttachment()) {
+                o.put("aName", m.getAttachmentName())
+                 .put("aPath", m.getAttachmentPath())
+                 .put("aType", m.getAttachmentType());
+            }
+            arr.put(o);
         }
         RedisClient.run(jedis ->
                 jedis.setex(KEY_HISTORY + sessionId, HISTORY_TTL, arr.toString()));

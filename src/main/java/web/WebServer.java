@@ -37,6 +37,8 @@ public class WebServer {
         server.createContext("/api/history", chat);
         // Bat ca /api/sessions va /api/sessions/{id}
         server.createContext("/api/sessions", sessions);
+        // File nguoi dung tai len
+        server.createContext("/uploads/", new UploadHandler());
         server.createContext("/", new StaticHandler());
 
         // Dung thread pool vi goi Gemini mat vai giay, khong the chan server

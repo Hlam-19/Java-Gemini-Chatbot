@@ -6,6 +6,7 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.List;
 import model.Message;
 import org.json.JSONArray;
@@ -33,9 +34,18 @@ public class GeminiService {
         return model;
     }
 
+    /** Mot file gui kem cau hoi. */
+    public record Attachment(String mimeType, byte[] data) {
+    }
+
     /** Hoi mot cau don le, khong kem lich su. */
     public String askGemini(String prompt) throws Exception {
-        return askGemini(prompt, List.of());
+        return askGemini(prompt, List.of(), null);
+    }
+
+    /** Hoi kem lich su, khong co file dinh kem. */
+    public String askGemini(String prompt, List<Message> history) throws Exception {
+        return askGemini(prompt, history, null);
     }
 
     /**
@@ -44,7 +54,8 @@ public class GeminiService {
      * @param prompt  cau hoi moi cua nguoi dung
      * @param history cac tin nhan truoc do (role "user" hoac "model")
      */
-    public String askGemini(String prompt, List<Message> history) throws Exception {
+    public String askGemini(String prompt, List<Message> history, Attachment file)
+            throws Exception {
 
         if (apiKey == null || apiKey.isBlank() || apiKey.startsWith("dan_api_key")) {
             return "Loi: Chua cau hinh GEMINI_API_KEY trong file .env!";
@@ -57,7 +68,17 @@ public class GeminiService {
         for (Message m : history) {
             contents.put(buildContent(m.getRole(), m.getContent()));
         }
-        contents.put(buildContent("user", prompt));
+        // Cau hoi moi: gui kem file neu co
+        if (file != null) {
+            JSONArray parts = new JSONArray();
+            parts.put(new JSONObject().put("text", prompt));
+            parts.put(new JSONObject().put("inline_data", new JSONObject()
+                    .put("mime_type", file.mimeType())
+                    .put("data", Base64.getEncoder().encodeToString(file.data()))));
+            contents.put(new JSONObject().put("role", "user").put("parts", parts));
+        } else {
+            contents.put(buildContent("user", prompt));
+        }
 
         JSONObject body = new JSONObject().put("contents", contents);
 

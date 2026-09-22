@@ -44,6 +44,8 @@ phó mặc cho framework.
 | Tự đặt tên | Tiêu đề đoạn chat lấy từ câu hỏi đầu tiên |
 | Cache | Redis giảm tải MySQL và tiết kiệm quota API |
 | Chống spam | Giới hạn số tin nhắn mỗi phút cho từng người dùng |
+| Đính kèm file | Gửi ảnh, PDF, file văn bản cho Gemini đọc |
+| Hiển thị Markdown | Câu trả lời render thành tiêu đề, danh sách, bảng, khối code |
 
 ---
 
@@ -215,19 +217,24 @@ Java-Gemini-Chatbot/
     │   │   ├── User.java
     │   │   ├── ChatSession.java
     │   │   └── Message.java
-    │   ├── service/GeminiService.java
+    │   ├── service/
+    │   │   ├── GeminiService.java
+    │   │   └── FileStorage.java
     │   └── web/
     │       ├── WebServer.java
     │       ├── AuthHandler.java
     │       ├── ChatHandler.java
     │       ├── SessionHandler.java
     │       ├── StaticHandler.java
+    │       ├── UploadHandler.java
+    │       ├── Multipart.java
     │       ├── SessionManager.java
     │       └── Http.java
     └── resources/static/
         ├── index.html
         ├── style.css
         ├── app.js
+        ├── markdown.js         # Chuyển Markdown -> HTML
         └── favicon.svg
 ```
 
@@ -362,6 +369,21 @@ String reply = gemini.askGemini(prompt, history);
 
 ---
 
+#### `service/FileStorage.java`
+
+Lưu file người dùng tải lên vào thư mục `uploads/`.
+
+Ba quy tắc an toàn quan trọng:
+
+1. **Tên file trên đĩa do hệ thống sinh** (UUID), không dùng tên gốc — người
+   dùng không thể đặt tên kiểu `../../etc/passwd` hay ghi đè file khác.
+   Tên gốc vẫn lưu trong database để hiển thị lại cho đúng.
+2. **Chỉ chấp nhận đuôi file trong danh sách cho phép** (ảnh, PDF, file văn bản).
+3. **Giới hạn dung lượng** (mặc định 10MB, đổi bằng `UPLOAD_MAX_MB`).
+
+Ảnh và PDF được gửi cho Gemini dưới dạng dữ liệu nhị phân (`inline_data`);
+file văn bản thì đọc nội dung rồi ghép thẳng vào câu hỏi.
+
 ### 5.5. Tầng web (`web/`)
 
 #### `web/WebServer.java` — điểm khởi động
@@ -436,6 +458,20 @@ CRUD đoạn chat. Tự phân tích đường dẫn `/api/sessions/{id}` vì
 **Mọi thao tác đều kiểm tra `belongsTo` trước**, và trả về `404` (không phải `403`)
 khi không có quyền — để người ngoài không đoán được đoạn chat đó có tồn tại hay không.
 
+#### `web/Multipart.java`
+
+Đọc dữ liệu form có kèm file (`multipart/form-data`).
+
+`com.sun.net.httpserver` không hỗ trợ sẵn định dạng này nên phải tự phân tích:
+tách các phần theo `boundary`, lấy tên trường, tên file và nội dung.
+
+#### `web/UploadHandler.java`
+
+Trả về file người dùng đã tải lên (`GET /uploads/{tên-file}`).
+
+**Bắt buộc đăng nhập.** Tên file trên đĩa là UUID do hệ thống sinh nên không
+đoán được, và `FileStorage` từ chối mọi tên không đúng định dạng UUID.
+
 #### `web/StaticHandler.java`
 
 Phục vụ file giao diện từ trong jar. Chặn đường dẫn chứa `..` để người ngoài
@@ -478,6 +514,17 @@ Có một dòng nhìn thì lạ nhưng rất quan trọng:
 Không có dòng này, `.dialog-backdrop { display: grid }` sẽ đè lên `hidden`,
 khiến hộp thoại dù đã ẩn vẫn **chặn toàn bộ click trên trang**. Đây là lỗi thật
 đã từng xảy ra trong dự án.
+
+#### `markdown.js`
+
+Chuyển Markdown mà Gemini trả về thành HTML: tiêu đề, khối code (kèm nút
+"Sao chép"), danh sách, bảng, trích dẫn, in đậm/nghiêng, liên kết.
+
+**Điểm an toàn quan trọng:** hàm `renderMarkdown()` escape toàn bộ HTML
+**trước khi** parse. Nội dung do Gemini trả về được coi là không đáng tin —
+nếu nó trả về `<script>` thì phải hiện ra dưới dạng chữ, không được chạy.
+
+Viết tay thay vì dùng thư viện để giữ dự án tối thiểu dependency.
 
 #### `app.js`
 
@@ -581,6 +628,24 @@ và phiên đăng nhập sẽ mất khi restart.
 
 ---
 
+### 7.5. Đính kèm file
+
+Người dùng gửi kèm ảnh, PDF hoặc file văn bản theo ba cách: bấm nút kẹp giấy,
+kéo thả vào cửa sổ, hoặc dán ảnh từ clipboard (Ctrl+V).
+
+| Loại file | Cách gửi cho Gemini |
+|-----------|---------------------|
+| Ảnh (png, jpg, webp, gif) | Dữ liệu nhị phân — Gemini "nhìn" được ảnh |
+| PDF | Dữ liệu nhị phân — Gemini đọc được nội dung |
+| Văn bản (txt, md, java, json…) | Đọc nội dung, ghép vào câu hỏi (tối đa 30.000 ký tự) |
+
+File lưu trong thư mục `uploads/` với tên UUID. Database chỉ lưu đường dẫn và
+tên gốc. Thư mục này nằm trong `.gitignore`; khi chạy Docker nó được gắn vào
+volume `uploads-data` nên không mất khi container khởi động lại.
+
+**Không cache câu trả lời** cho tin nhắn có đính kèm — cùng một câu hỏi nhưng
+file khác nhau thì kết quả phải khác.
+
 ## 8. Danh sách API
 
 Mọi API đều nhận và trả JSON. Lỗi trả về dạng `{"error": "mô tả"}`.
@@ -607,11 +672,15 @@ Mọi API đều nhận và trả JSON. Lỗi trả về dạng `{"error": "mô 
 
 | Method | Đường dẫn | Body | Trả về |
 |--------|-----------|------|--------|
-| POST | `/api/chat` | `{message, sessionId?}` | `{reply, sessionId, cached, remaining}` |
+| POST | `/api/chat` | `{message, sessionId?}` hoặc form-data | `{reply, sessionId, cached, remaining, attachment?}` |
+| GET | `/uploads/{tên-file}` | — | Nội dung file (cần đăng nhập) |
 | GET | `/api/history?sessionId=N` | — | `{messages: [...]}` |
 
 > Bỏ trống `sessionId` khi gọi `/api/chat` → hệ thống tự tạo đoạn chat mới và
 > trả về `newSession: true` kèm `title`.
+>
+> **Gửi kèm file:** dùng `multipart/form-data` với các trường `message`,
+> `sessionId` và `file` thay cho JSON.
 
 ### Mã lỗi
 
@@ -835,12 +904,12 @@ taskkill /F /IM java.exe     # Windows
 | Chạy HTTP, không HTTPS | Dữ liệu truyền đi không mã hoá | Đặt sau nginx có SSL |
 | Không phân trang lịch sử | Đoạn chat rất dài sẽ tải chậm | Thêm `LIMIT` / `OFFSET` |
 | Không có test tự động | Sửa code dễ làm hỏng chỗ khác | Thêm JUnit |
-| Câu trả lời hiện dạng văn bản thô | Code và bảng không được định dạng | Thêm thư viện render Markdown |
+| Chưa tô màu cú pháp trong khối code | Code hiển thị một màu | Thêm thư viện highlight |
+| File tải lên không bị dọn | Thư mục `uploads/` phình dần | Thêm tác vụ xoá file của đoạn chat đã xoá |
 
 ### Có thể làm tiếp
 
 - Hiển thị câu trả lời theo kiểu gõ dần (streaming)
-- Cho phép tải lên hình ảnh (Gemini hỗ trợ đa phương thức)
 - Xuất đoạn chat ra file PDF / Markdown
 - Tìm kiếm trong lịch sử hội thoại
 - Chế độ sáng / tối

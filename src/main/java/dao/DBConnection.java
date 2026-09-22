@@ -3,6 +3,7 @@ package dao;
 import config.Env;
 import java.sql.Connection;
 import java.sql.DriverManager;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 
@@ -47,6 +48,24 @@ public class DBConnection {
         System.err.println("[DB] Kiem tra MySQL da chay chua va DB_URL co dung khong.");
     }
 
+    /** Them mot cot neu bang chua co cot do - dung de nang cap database cu. */
+    private static void addColumnIfMissing(Statement stmt, String table,
+                                           String column, String definition) {
+        try (ResultSet rs = stmt.executeQuery(
+                "SELECT COUNT(*) FROM information_schema.COLUMNS "
+                + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = '" + table + "' "
+                + "AND COLUMN_NAME = '" + column + "'")) {
+
+            if (rs.next() && rs.getInt(1) == 0) {
+                stmt.executeUpdate("ALTER TABLE " + table + " ADD COLUMN "
+                        + column + " " + definition);
+                System.out.println("[DB] Da them cot " + table + "." + column);
+            }
+        } catch (SQLException e) {
+            System.err.println("[DB] Khong them duoc cot " + column + ": " + e.getMessage());
+        }
+    }
+
     private static boolean tryInitTables() {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
@@ -85,6 +104,9 @@ public class DBConnection {
                     session_id INT NOT NULL,
                     role VARCHAR(10) NOT NULL,
                     content TEXT,
+                    attachment_name VARCHAR(255) DEFAULT NULL,
+                    attachment_path VARCHAR(500) DEFAULT NULL,
+                    attachment_type VARCHAR(100) DEFAULT NULL,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     CONSTRAINT fk_messages_user FOREIGN KEY (user_id)
                         REFERENCES users(id) ON DELETE CASCADE,
@@ -94,6 +116,12 @@ public class DBConnection {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """;
             stmt.executeUpdate(sqlMessages);
+
+            // Them cot dinh kem cho database tao truoc khi co tinh nang upload.
+            // CREATE TABLE IF NOT EXISTS khong dung den bang da ton tai nen phai lam rieng.
+            addColumnIfMissing(stmt, "messages", "attachment_name", "VARCHAR(255) DEFAULT NULL");
+            addColumnIfMissing(stmt, "messages", "attachment_path", "VARCHAR(500) DEFAULT NULL");
+            addColumnIfMissing(stmt, "messages", "attachment_type", "VARCHAR(100) DEFAULT NULL");
 
             System.out.println("[DB] Da ket noi MySQL va khoi tao bang users, sessions, messages.");
             return true;

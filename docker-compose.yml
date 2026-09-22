@@ -79,8 +79,13 @@ services:
       GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.5-flash}
 
       SERVER_PORT: 8080
+      UPLOAD_DIR: /app/uploads
+      UPLOAD_MAX_MB: ${UPLOAD_MAX_MB:-10}
       SESSION_TTL_SECONDS: ${SESSION_TTL_SECONDS:-604800}
       RATE_LIMIT_PER_MINUTE: ${RATE_LIMIT_PER_MINUTE:-20}
+    volumes:
+      # Giu file nguoi dung tai len khi container khoi dong lai
+      - uploads-data:/app/uploads
     depends_on:
       mysql:
         condition: service_healthy
@@ -92,6 +97,7 @@ services:
 volumes:
   mysql-data:
   redis-data:
+  uploads-data:
 
 networks:
   chatbot-net:
