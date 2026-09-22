@@ -1,0 +1,8 @@
+/target/
+/build/
+/nbproject/private/
+/nbproject/project.fragment
+*.log
+*.db
+*.properties
+config.properties
