@@ -28,6 +28,11 @@ public class GeminiService {
                 .build();
     }
 
+    /** Ten model dang dung - dung lam mot phan khoa cache. */
+    public String getModel() {
+        return model;
+    }
+
     /** Hoi mot cau don le, khong kem lich su. */
     public String askGemini(String prompt) throws Exception {
         return askGemini(prompt, List.of());

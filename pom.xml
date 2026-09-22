@@ -23,6 +23,18 @@
             <version>9.1.0</version>
         </dependency>
         <dependency>
+            <groupId>redis.clients</groupId>
+            <artifactId>jedis</artifactId>
+            <version>5.2.0</version>
+        </dependency>
+        <!-- Jedis dung SLF4J 1.7.x; them ban rong CUNG DONG 1.7 de khong in
+             canh bao khi khoi dong (ban 2.x se khong khop va van canh bao) -->
+        <dependency>
+            <groupId>org.slf4j</groupId>
+            <artifactId>slf4j-nop</artifactId>
+            <version>1.7.36</version>
+        </dependency>
+        <dependency>
             <groupId>org.json</groupId>
             <artifactId>json</artifactId>
             <version>20250107</version>

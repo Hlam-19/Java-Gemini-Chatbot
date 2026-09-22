@@ -14,7 +14,7 @@ public class UserDAO {
      */
     public boolean register(String username, String plainPassword) {
 
-        String sql = "INSERT INTO USERS (username, password_hash) VALUES (?, ?)";
+        String sql = "INSERT INTO users (username, password_hash) VALUES (?, ?)";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -33,7 +33,7 @@ public class UserDAO {
     /** Dang nhap. Tra ve User neu dung, null neu sai thong tin. */
     public User login(String username, String plainPassword) {
 
-        String sql = "SELECT * FROM USERS WHERE username = ? AND password_hash = ?";
+        String sql = "SELECT * FROM users WHERE username = ? AND password_hash = ?";
 
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -82,7 +82,7 @@ public class UserDAO {
 
     /** Kiem tra username da duoc su dung chua. */
     public boolean existsByUsername(String username) {
-        String sql = "SELECT 1 FROM USERS WHERE username = ?";
+        String sql = "SELECT 1 FROM users WHERE username = ?";
         try (Connection conn = DBConnection.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
 

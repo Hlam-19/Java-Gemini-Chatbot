@@ -18,7 +18,36 @@ public class DBConnection {
         return DriverManager.getConnection(URL, USER, PASSWORD);
     }
 
+    /**
+     * Tao bang neu chua co.
+     *
+     * Thu lai nhieu lan vi khi chay bang docker-compose, ung dung co the khoi dong
+     * truoc khi MySQL kip san sang nhan ket noi.
+     */
     public static void initTables() {
+        int maxAttempts = Env.getInt("DB_INIT_RETRIES", 10);
+
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            if (tryInitTables()) {
+                return;
+            }
+            if (attempt < maxAttempts) {
+                System.out.println("[DB] Chua ket noi duoc, thu lai lan "
+                        + attempt + "/" + maxAttempts + " sau 3 giay...");
+                try {
+                    Thread.sleep(3000);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    return;
+                }
+            }
+        }
+
+        System.err.println("[DB] Khong khoi tao duoc bang sau " + maxAttempts + " lan thu.");
+        System.err.println("[DB] Kiem tra MySQL da chay chua va DB_URL co dung khong.");
+    }
+
+    private static boolean tryInitTables() {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
 
@@ -67,11 +96,11 @@ public class DBConnection {
             stmt.executeUpdate(sqlMessages);
 
             System.out.println("[DB] Da ket noi MySQL va khoi tao bang users, sessions, messages.");
+            return true;
 
         } catch (SQLException e) {
             System.err.println("[DB] Loi khoi tao bang: " + e.getMessage());
-            System.err.println("[DB] Kiem tra MySQL da chay chua va DB_URL trong .env co dung khong.");
-            e.printStackTrace();
+            return false;
         }
     }
 }

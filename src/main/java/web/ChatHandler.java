@@ -1,5 +1,6 @@
 package web;
 
+import cache.ChatCache;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import dao.MessageDAO;
@@ -88,6 +89,13 @@ public class ChatHandler implements HttpHandler {
             return;
         }
 
+        // Chan spam truoc khi lam bat cu viec gi ton kem
+        if (!ChatCache.allowRequest(userId)) {
+            Http.sendError(ex, 429, "Ban gui qua nhanh. Vui long cho mot phut roi thu lai "
+                    + "(gioi han " + ChatCache.rateLimit() + " tin nhan moi phut).");
+            return;
+        }
+
         // Chua co doan chat nao -> tu tao moi, lay cau hoi dau lam tieu de
         boolean isNewSession = false;
         if (sessionId <= 0) {
@@ -110,14 +118,30 @@ public class ChatHandler implements HttpHandler {
 
         messageDAO.saveMessage(userId, sessionId, "user", prompt);
 
-        String reply = gemini.askGemini(prompt, history);
+        // Cau hoi dau tien cua doan chat thi co the dung lai cau tra loi cu,
+        // vi luc nay chua co ngu canh rieng nao anh huong den ket qua.
+        String reply = null;
+        boolean cacheable = history.isEmpty();
+        if (cacheable) {
+            reply = ChatCache.getReply(prompt, gemini.getModel());
+        }
+
+        boolean fromCache = reply != null;
+        if (!fromCache) {
+            reply = gemini.askGemini(prompt, history);
+            if (cacheable) {
+                ChatCache.putReply(prompt, gemini.getModel(), reply);
+            }
+        }
 
         messageDAO.saveMessage(userId, sessionId, "model", reply);
         sessionDAO.touch(sessionId);
 
         JSONObject result = new JSONObject()
                 .put("reply", reply)
-                .put("sessionId", sessionId);
+                .put("sessionId", sessionId)
+                .put("cached", fromCache)
+                .put("remaining", ChatCache.remainingQuota(userId));
         if (isNewSession) {
             result.put("newSession", true).put("title", autoTitle(prompt));
         }

@@ -1,5 +1,6 @@
 package web;
 
+import cache.RedisClient;
 import com.sun.net.httpserver.HttpServer;
 import config.Env;
 import dao.DBConnection;
@@ -14,6 +15,12 @@ public class WebServer {
 
         // Tao bang neu chua co
         DBConnection.initTables();
+
+        // Nap lop Redis ngay luc khoi dong de biet som co ket noi duoc khong
+        RedisClient.isAvailable();
+
+        // Dong ket noi gon gang khi nhan Ctrl+C
+        Runtime.getRuntime().addShutdownHook(new Thread(RedisClient::close));
 
         int port = Env.getInt("SERVER_PORT", 8080);
         HttpServer server = HttpServer.create(new InetSocketAddress(port), 0);
@@ -39,6 +46,7 @@ public class WebServer {
         System.out.println("=================================================");
         System.out.println("  Chatbot dang chay tai: http://localhost:" + port);
         System.out.println("  Model: " + Env.get("GEMINI_MODEL", "gemini-3.6-flash"));
+        System.out.println("  Redis: " + (RedisClient.isAvailable() ? "da ket noi" : "khong dung"));
         System.out.println("  Nhan Ctrl+C de dung.");
         System.out.println("=================================================");
     }

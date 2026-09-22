@@ -1,5 +1,6 @@
 package web;
 
+import cache.ChatCache;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 import dao.MessageDAO;
@@ -123,6 +124,7 @@ public class SessionHandler implements HttpHandler {
             Http.sendError(ex, 500, "Xoa that bai");
             return;
         }
+        ChatCache.invalidateHistory(sessionId);
         Http.sendJson(ex, 200, new JSONObject().put("ok", true));
     }
 

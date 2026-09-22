@@ -1,5 +1,6 @@
 package dao;
 
+import cache.ChatCache;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -20,6 +21,9 @@ public class MessageDAO {
             stmt.setString(3, role);
             stmt.setString(4, content);
             stmt.executeUpdate();
+
+            // Lich su vua doi -> bo cache cu di
+            ChatCache.invalidateHistory(sessionId);
             return true;
 
         } catch (Exception e) {
@@ -28,8 +32,16 @@ public class MessageDAO {
         }
     }
 
-    /** Lich su cua mot doan chat, theo thu tu thoi gian. */
+    /**
+     * Lich su cua mot doan chat, theo thu tu thoi gian.
+     * Uu tien lay tu Redis, khong co moi doc MySQL roi cache lai.
+     */
     public List<Message> getHistory(int sessionId) {
+        List<Message> cached = ChatCache.getHistory(sessionId);
+        if (cached != null) {
+            return cached;
+        }
+
         List<Message> list = new ArrayList<>();
         String sql = """
                 SELECT id, user_id, session_id, role, content, created_at
@@ -54,7 +66,10 @@ public class MessageDAO {
 
         } catch (Exception e) {
             System.err.println("[MessageDAO] Loi lay lich su: " + e.getMessage());
+            return list;
         }
+
+        ChatCache.putHistory(sessionId, list);
         return list;
     }
 
