@@ -1,89 +1,98 @@
 package dao;
 
-import model.User;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.security.MessageDigest;
+import model.User;
 
 public class UserDAO {
-public static String hashPassword(String password) {
 
-    try {
-        MessageDigest md = MessageDigest.getInstance("SHA-256");
+    /**
+     * Dang ky tai khoan moi. Mat khau duoc bam truoc khi luu.
+     *
+     * @return true neu thanh cong, false neu username da ton tai hoac loi DB
+     */
+    public boolean register(String username, String plainPassword) {
 
-        byte[] hash = md.digest(password.getBytes());
+        String sql = "INSERT INTO USERS (username, password_hash) VALUES (?, ?)";
 
-        StringBuilder hexString = new StringBuilder();
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-        for (byte b : hash) {
-            String hex = Integer.toHexString(0xff & b);
+            stmt.setString(1, username);
+            stmt.setString(2, PasswordUtil.hashPassword(plainPassword));
+            stmt.executeUpdate();
+            return true;
 
-            if (hex.length() == 1) {
-                hexString.append('0');
+        } catch (Exception e) {
+            System.err.println("[UserDAO] Dang ky that bai: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /** Dang nhap. Tra ve User neu dung, null neu sai thong tin. */
+    public User login(String username, String plainPassword) {
+
+        String sql = "SELECT * FROM USERS WHERE username = ? AND password_hash = ?";
+
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, username);
+            stmt.setString(2, PasswordUtil.hashPassword(plainPassword));
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    User user = new User();
+                    user.setId(rs.getInt("id"));
+                    user.setUsername(rs.getString("username"));
+                    user.setPasswordHash(rs.getString("password_hash"));
+                    return user;
+                }
             }
 
-            hexString.append(hex);
+        } catch (Exception e) {
+            System.err.println("[UserDAO] Dang nhap loi: " + e.getMessage());
         }
 
-        return hexString.toString();
-
-    } catch (Exception e) {
-        throw new RuntimeException(e);
+        return null;
     }
-}
-public boolean register(String username, String passwordHash) {
 
-    String sql = """
-        INSERT INTO USERS (username, password_hash)
-        VALUES (?, ?)
-    """;
+    /** Tim user theo id - dung khi khoi phuc phien tu cookie. */
+    public User findById(int id) {
+        String sql = "SELECT id, username, password_hash FROM users WHERE id = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
 
-    try (Connection conn = DBConnection.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-        stmt.setString(1, username);
-        stmt.setString(2, passwordHash);
-
-        stmt.executeUpdate();
-
-        return true;
-
-    } catch (Exception e) {
-        e.printStackTrace();
-        return false;
-    }
-}
-public User login(String username, String passwordHash) {
-
-    String sql = """
-        SELECT * FROM USERS
-        WHERE username = ? AND password_hash = ?
-    """;
-
-    try (Connection conn = DBConnection.getConnection();
-         PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-        stmt.setString(1, username);
-        stmt.setString(2, passwordHash);
-
-        ResultSet rs = stmt.executeQuery();
-
-        if (rs.next()) {
-
-            User user = new User();
-
-            user.setId(rs.getInt("id"));
-            user.setUsername(rs.getString("username"));
-            user.setPasswordHash(rs.getString("password_hash"));
-
-            return user;
+            stmt.setInt(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    User user = new User();
+                    user.setId(rs.getInt("id"));
+                    user.setUsername(rs.getString("username"));
+                    user.setPasswordHash(rs.getString("password_hash"));
+                    return user;
+                }
+            }
+        } catch (Exception e) {
+            System.err.println("[UserDAO] Loi tim user: " + e.getMessage());
         }
-
-    } catch (Exception e) {
-        e.printStackTrace();
+        return null;
     }
 
-    return null;
-}
+    /** Kiem tra username da duoc su dung chua. */
+    public boolean existsByUsername(String username) {
+        String sql = "SELECT 1 FROM USERS WHERE username = ?";
+        try (Connection conn = DBConnection.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, username);
+            try (ResultSet rs = stmt.executeQuery()) {
+                return rs.next();
+            }
+        } catch (Exception e) {
+            System.err.println("[UserDAO] Loi kiem tra username: " + e.getMessage());
+            return false;
+        }
+    }
 }
