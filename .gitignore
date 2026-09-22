@@ -1,8 +1,26 @@
+# Build output
 /target/
 /build/
+/bin/
+*.class
+
+# IDE
 /nbproject/private/
 /nbproject/project.fragment
-*.log
-*.db
-*.properties
+/.settings/
+/.project
+/.classpath
+/.idea/
+*.iml
+
+# Bien moi truong - KHONG BAO GIO commit
+.env
+.env.local
 config.properties
+
+# Database cu (HSQLDB) - khong con dung
+/data/
+chatbotdb.*
+
+# Log
+*.log
